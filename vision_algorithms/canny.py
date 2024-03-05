@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+print(cv2.__version__)
 img_path = "./data/vertical_full.png"
 gray_img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
 
