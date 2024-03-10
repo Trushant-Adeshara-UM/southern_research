@@ -45,7 +45,7 @@ class Staging(object):
 			self.y += y
 		if z != None:	
 			self.z += z	
-	def gotoxyz(self,pos_array=(None,None,None), f=NOTHING):#wrapper
+	def gotoxyz(self, pos_array=(None,None,None), f=NOTHING):#wrapper
 		x=pos_array[0]
 		y=pos_array[1]
 		z=pos_array[2]
@@ -111,11 +111,82 @@ class Aerotech(Staging):
         self.delete_safe_zones()
         print('Aerotech closed')
 
-    # add create_safe_zone function
+    def create_safe_zone(self, material):
+        # Define Nozzle safe zone
+        self.send_message('SAFEZONE 0 CLEAR\n')
+        self.send_message('SAFEZONE 0 TYPE SAFEZONETYPE_NoEnter \n')
+        self.send_message('SAFEZONE 0 SET X ' + repr(SAFE_ZONE_NOZZLE_X[0]) + ', ' + repr(SAFE_ZONE_NOZZLE_X[1]) + '\n')
+        self.send_message('SAFEZONE 0 SET Y ' + repr(SAFE_ZONE_NOZZLE_Y[0]) + ', ' + repr(SAFE_ZONE_NOZZLE_Y[1]) + '\n')
+        self.send_message('SAFEZONE 0 SET Z ' + repr(SAFE_ZONE_NOZZLE_Z[material]) + ', ' + repr(SAFE_ZONE_NOZZLE_Z[len(SAFE_ZONE_NOZZLE_Z) - 1]) + '\n')
+        self.send_message('SAFEZONE 0 ON\n')
+
+        # Define AFM safe zone
+        self.send_message('SAFEZONE 1 CLEAR\n')
+        self.send_message('SAFEZONE 1 TYPE SAFEZONETYPE_NoEnter \n')
+        self.send_message('SAFEZONE 1 SET X ' + repr(SAFE_ZONE_AFM_X[0]) + ', ' + repr(SAFE_ZONE_NOZZLE_X[1]) + '\n')
+        self.send_message('SAFEZONE 1 SET Y ' + repr(SAFE_ZONE_AFM_Y[0]) + ', ' + repr(SAFE_ZONE_NOZZLE_Y[1]) + '\n')
+        self.send_message('SAFEZONE 1 SET Z ' + repr(SAFE_ZONE_AFM_Z[material]) + ', ' + repr(SAFE_ZONE_AFM_Z[len(SAFE_ZONE_AFM_Z) - 1]) + '\n')
+        self.send_message('SAFEZONE 1 ON\n')
 
     def delete_safe_zones(self):
         self.send_message('SAFEZONE 0 CLEAR\n')
         self.send_message('SAFEZONE 1 CLEAR\n')
+
+    def get_socket(self):
+        return self.socket
+
+    def goto(self, x = None, y = None, z = None, f = NOTHING):
+        if f is NOTHING:
+            f = self.default_feedrate
+        if x != None or y != None or z != None:
+            msg = 'LINEAR' #G1
+            if x != None:
+                msg += ' X' + ('%0.6f' %x)
+            if y != None:
+                msg += ' Y' + ('%0.6f' %y)
+            if z != None:
+                msg += ' Z' + ('%0.6f' %z)
+            if f != None:
+                msg += ' F' + ('%0.6f' %f)
+        elif f != None:
+            msg = 'F' + repr(f)
+        else:
+            raise ValueError('staging.goto() was called with all None arguments')
+        msg += '\n'
+        print(msg)
+        self.send_message(msg)
+
+    def setPressure(self, pressure = None):
+        if pressure != None:
+            msg = '$AO[1].X = '
+            msg += '%0.6f' %pressure
+
+        else:
+            raise ValueError('staging.setPressure() was called with all None arguments')
+        msg += '\n'
+        print(msg)
+        self.send_message(msg)
+
+    def goto_xyz(self, pos_array=(None, None, None), f=NOTHING):
+        x = pos_array[0]
+        y = pos_array[1]
+        z = pos_array[2]
+        self.goto(x, y, z, f)
+
+    def goto_rapid(self, x = None, y = None, z = None):
+        if x != None or y != None or z != None:
+            msg = 'RAPID' #G0
+            if x != None:
+                msg += ' X' + repr(x)
+            if y != None:
+                msg += ' Y' + repr(y)
+            if z != None:
+                msg += ' Z' + repr(z)
+        else:
+            raise ValueError('staging.goto_rapid() wad called with all None arguments')
+        msg += '\n'
+        print(msg)
+        self.send_message(msg)
 
     def send_message(self, msg):
         print(msg)
@@ -129,7 +200,4 @@ class Aerotech(Staging):
         if (len(self.recv_msg)>1):
             return str(self.recv_msg[1:-1])
 
-
-print("script starting")
-test = Aerotech()
-print("Aerotech object created")
+test = Aerotech(0, incremental=False)

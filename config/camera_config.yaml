@@ -1,0 +1,12 @@
+##################################################
+# File: camera_config.yaml                       #
+##################################################
+
+cameras:
+  measurement_camera:
+  - 0
+  - acA1300-30um
+  nozzle_camera:
+  - 1
+  - acA640-750um
+max_camera: 2
