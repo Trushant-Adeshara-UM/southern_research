@@ -38,13 +38,23 @@ class PylonCamera:
         # Open camera
         self.camera.Open()
 
+        # Set the camera to software trigger mode
+        self.camera.TriggerSelector.SetValue("FrameStart")
+        self.camera.TriggerMode.SetValue("On")
+        self.camera.TriggerSource.SetValue("Software")
+
         # Fetch camera parameters
         pylon.FeaturePersistence.Load(self.camera_param_filepath, self.camera.GetNodeMap(), True)
 
         # Start grabbing 
-        self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+        #self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+        self.camera.StartGrabbing(pylon.GrabStrategy_OneByOne)
 
         while self.camera.IsGrabbing():
+            # Execute software trigger
+            if self.camera.WaitForFrameTriggerReady(1000, pylon.TimeoutHandling_ThrowException):
+                self.camera.ExecuteSoftwareTrigger() 
+    
             # Grab a single frame
             grabResult = self.camera.RetrieveResult(629596, pylon.TimeoutHandling_ThrowException)
 
@@ -68,10 +78,6 @@ class PylonCamera:
 
     def getImage(self):
         return self.image 
-
-    
-
-
 
 
 

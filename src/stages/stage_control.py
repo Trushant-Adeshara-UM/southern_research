@@ -23,65 +23,68 @@ SAFE_ZONE_AFM_Z = [3.9, 4.5, 5]
 NOTHING = object() #placeholder for self.default_feedrate, do not delete
 
 class Staging(object):
-	def __init__(self, material = 0, incremental = False):
-		self.default_feedrate = 1.0 # mm/s #Eventually replace with None
-		self.x = 0
-		self.y = 0
-		self.z = 0
-		self.initialized = True
-		if not incremental:
-			#absolute mode
-			print('Staging initialized - Absolute mode')
-		elif incremental:
-			#incremental mode
-			print('Staging initialized - Incremental mode')
-	def goto(self, x = None, y = None, z = None, f = NOTHING):
-		if f is NOTHING:
-			f=self.default_feedrate
-		print('Moving by', x, ' ', y, ' ', z, ' at speed ', f, ' mm/s.\n')
-		if x != None:	
-			self.x += x
-		if y != None:	
-			self.y += y
-		if z != None:	
-			self.z += z	
-	def gotoxyz(self, pos_array=(None,None,None), f=NOTHING):#wrapper
-		x=pos_array[0]
-		y=pos_array[1]
-		z=pos_array[2]
-		self.goto(x,y,z,f)
-	def goto_rapid(self, x = None, y = None, z = None):
-		print('Moving rapidly by', x, ' ', y, ' ', z)
-		if x != None:	
-			self.x += x
-		if y != None:	
-			self.y += y
-		if z != None:	
-			self.z += z			
-	def send_message(self, msg):
-		print(msg)
-	def set_pos(self, x = None , y = None , z = None ): #for testing only
-		if x != None:	
-			self.x = x
-		if y != None:	
-			self.y = y
-		if z != None:	
-			self.z = z	
-	def get_coords(self, axis):#for testing
-		return (self.x, self.y, self.z)
-	def get_pos(self, axis = None):
-		if axis in ['x', 'X']:
-			return float(self.x)
-		elif axis in ['y', 'Y']:
-			return float(self.y)
-		elif axis in ['z', 'Z']: #Z fine
-			return float(self.z)
-		else:
-			raise ValueError('get_pos was called without a valid axis')
+        
+    def __init__(self, material = 0, incremental = False):
+        self.default_feedrate = 1.0 # mm/s #Eventually replace with None
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        self.initialized = True
+        if not incremental:
+            #absolute mode
+            print('Staging initialized - Absolute mode')
+        elif incremental:
+            #incremental mode
+            print('Staging initialized - Incremental mode')
+    def goto(self, x = None, y = None, z = None, f = NOTHING):
+        print("GOTO inside Staging class")
+        if f is NOTHING:
+            f=self.default_feedrate
+        print('Moving by', x, ' ', y, ' ', z, ' at speed ', f, ' mm/s.\n')
+        if x != None:	
+            self.x += x
+        if y != None:	
+            self.y += y
+        if z != None:	
+            self.z += z
+    def gotoxyz(self, pos_array=(None,None,None), f=NOTHING):#wrapper
+        x=pos_array[0]
+        y=pos_array[1]
+        z=pos_array[2]
+        self.goto(x,y,z,f)
+    def goto_rapid(self, x = None, y = None, z = None):
+        print('Moving rapidly by', x, ' ', y, ' ', z)
+        if x != None:	
+            self.x += x
+        if y != None:	
+            self.y += y
+        if z != None:	
+            self.z += z			
+    def send_message(self, msg):
+        print(msg)
+    def set_pos(self, x = None , y = None , z = None ): #for testing only
+        if x != None:	
+            self.x = x
+        if y != None:	
+            self.y = y
+        if z != None:	
+            self.z = z	
+    def get_coords(self, axis):#for testing
+        return (self.x, self.y, self.z)
+    def get_pos(self, axis = None):
+        if axis in ['x', 'X']:
+            return float(self.x)
+        elif axis in ['y', 'Y']:
+            return float(self.y)
+        elif axis in ['z', 'Z']: #Z fine
+            return float(self.z)
+        else:
+            raise ValueError('get_pos was called without a valid axis')
 
 
 class Aerotech(Staging):
     def __init__(self, material=0, incremental=False):
+        super().__init__()
         self.default_feedrate = 1.0
         print(f'IncrementalB: {incremental}')
 
@@ -138,18 +141,23 @@ class Aerotech(Staging):
         return self.socket
 
     def goto(self, x = None, y = None, z = None, f = NOTHING):
+        print("GOTO inside Aerotech class")
         if f is NOTHING:
             f = self.default_feedrate
         if x != None or y != None or z != None:
             msg = 'LINEAR' #G1
             if x != None:
                 msg += ' X' + ('%0.6f' %x)
+                self.x += x
             if y != None:
                 msg += ' Y' + ('%0.6f' %y)
+                self.y += y
             if z != None:
                 msg += ' Z' + ('%0.6f' %z)
+                self.z += z
             if f != None:
                 msg += ' F' + ('%0.6f' %f)
+
         elif f != None:
             msg = 'F' + repr(f)
         else:
@@ -157,6 +165,7 @@ class Aerotech(Staging):
         msg += '\n'
         print(msg)
         self.send_message(msg)
+  
 
     def setPressure(self, pressure = None):
         if pressure != None:

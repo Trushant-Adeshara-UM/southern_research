@@ -6,6 +6,10 @@ sys.path.insert(0, 'C:\\Users\\trushant\\southern_research\\src')
 
 from stages.stage_control import Aerotech
 
+from vision.camera_controller import CameraController
+from vision.image_grabber import ImageGrabber
+from vision.line_width_estimator import LineWidthEstimator
+
 class Printer:
     def __init__(self, *args, **kwargs):
         # Axis specifier
@@ -15,6 +19,7 @@ class Printer:
 
         # Initial speed in each axis
         self.xspeed = 0.5
+        self.xspeed_fast = 10
         self.yspeed = 0.5
         self.zspeed = 0.5
         self.zspeed_slow = 0.1
@@ -29,15 +34,16 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.camera_offset = [99, 3, -7] # Offset from needle zero to camera
+        self.camera_offset = [-99.3, 1.45, -0.3] # Offset from needle zero to camera
         self.print_location = [0, 0, 0]
         self.moving_height = 10
         self.verbose = 3
 
+        self.estimated_line_width = 0
+
         # Initialize stages using Aerotech class
         self.staging = Aerotech(material=0, incremental=True) # Use incremental movements
         self.staging.send_message('~INITQUEUE\n') # Initialize the queue
-        print(self.staging.x)
         self.vdisp("Initialized Printer class")
 
     def vdisp(self, s, l=1):
@@ -105,6 +111,50 @@ class Printer:
             raise Exception("Trying to move via a nonexistent axis")
         self.current_location = [self.staging.x, self.staging.y, self.staging.z]
 
+    def grab_image(self):
+        camera_controller = CameraController("measurement_camera")
+        camera_controller.configure_for_software_trigger()
+
+        image_grabber = ImageGrabber(camera_controller)
+        image = image_grabber.grab_image()
+
+        camera_controller.stop_grabbing()
+        camera_controller.close()
+
+        return image
+
+    def estimate_line_width(self, image):
+        estimator = LineWidthEstimator(image)
+        contour = estimator.contour_detection()
+        points, _, line_image = estimator.line_extraction(contour)
+        line_width = estimator.line_width(points, self.ref_width)
+        
+        return line_width
+
+    def linear_estimator(self, axis, distance, speed):
+
+        intervals = [distance/4, distance/2, (3*distance)/4]
+        line_widths = []
+
+        for interval in intervals:
+
+            if (axis == 0):
+                self.staging.goto(x=interval, f=speed)
+            elif (axis == 1):
+                self.staging.goto(y=interval, f=speed)
+            elif (axis == 2):
+                self.staging.goto(z=interval, f=speed)
+            else:
+                raise Exception("Trying to move via a nonexistent axis")
+            
+            captured_img = grab_image()
+            line_widths.append(estimate_line_width(captured_img))
+        
+        if len(line_widths) != 0:
+            self.estimated_line_width = sum(line_widths) / len(line_width)
+        
+        self.current_location = [self.staging.x, self.staging.y, self.staging.z]
+
     def move_to_location(self, location):
         current_z = self.current_location[2]
         self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
@@ -125,28 +175,30 @@ class Printer:
         self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
 
         current_x = self.current_location[0]
-        self.linear(self.xaxis, self.camera_offset[0] - current_x, self.xspeed)
+        self.linear(self.xaxis, 9 * (self.camera_offset[0] - current_x) / 10, self.xspeed_fast)
+        self.linear(self.xaxis, (self.camera_offset[0] - current_x) / 10, self.xspeed)
 
         current_y = self.current_location[1]
         self.linear(self.yaxis, self.camera_offset[1] - current_y, self.yspeed)
 
-        current_z = self.currernt_location[2]
-        self.linear(self.zaxis, 2 * (self.camera_offset[2] - current_z) / 3, self.zpeed)
-        self.linear(self.zaxis, (self.camera_offset[2] - current_z) / 3, self.zspeed_slow)
+        current_z = self.current_location[2]
+        #self.linear(self.zaxis, 2 * (self.camera_offset[2] - current_z) / 3, self.zspeed)
+        self.linear(self.zaxis, self.camera_offset[2] - current_z, self.zspeed_slow)
 
     def move_to_nozzle(self):
         current_z = self.current_location[2]
         self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
 
         current_x = self.current_location[0]
-        self.linear(self.x_axis, self.print_location[0] - current_x, self.xspeed)
+        self.linear(self.xaxis, 9 * (self.print_location[0] - current_x) / 10, self.xspeed_fast)
+        self.linear(self.xaxis, (self.print_location[0] - current_x) / 10, self.xspeed)
 
         current_y = self.current_location[1]
-        self.linear(self.y_axis, self.print_location[1] - current_y, self.yspeed)
+        self.linear(self.yaxis, self.print_location[1] - current_y, self.yspeed)
 
         current_z = self.current_location[2]
         self.linear(self.zaxis, 2 * (self.camera_offset[2] - current_z) / 3, self.zspeed)
-        self.linear(self.zaxis, (self.camera_offset[2] - current_z ) / 3, self.zpeed_slow)
+        self.linear(self.zaxis, (self.camera_offset[2] - current_z ) / 3, self.zspeed_slow)
 
         if self.print_location != self.current_location:
             raise ValueError("Something went wrong with moving!")

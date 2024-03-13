@@ -3,12 +3,11 @@ import cv2
 import numpy as np
 from scipy.signal import medfilt2d
 
-from pylon_camera import PylonCamera
-
 class LineWidthEstimator():
     """
     TODO
     """
+
     def __init__(self, image):
         self.px_mm_factor = 1.59
         self.threshold_1 = 0.3
@@ -17,58 +16,85 @@ class LineWidthEstimator():
 
         self.image = image
 
-        _, self.binary_threshold_1 = cv2.threshold(self.image, self.threshold_1 * 255, 255, cv2.THRESH_BINARY)
-        _, self.binary_threshold_2 = cv2.threshold(self.binary_threshold_1, self.threshold_2 * 255, 255, cv2.THRESH_BINARY)
-        _, self.binary_threshold_3 = cv2.threshold(self.binary_threshold_2, self.threshold_3 * 255, 255, cv2.THRESH_BINARY)
 
-        self.binary = self.binary_threshold_3.copy()
+    def contour_detection(self):
+        _, binary_threshold_1 = cv2.threshold(self.image, self.threshold_1 * 255, 255, cv2.THRESH_BINARY)
+        _, binary_threshold_2 = cv2.threshold(binary_threshold_1, self.threshold_2 * 255, 255, cv2.THRESH_BINARY)
+        _, binary_threshold_3 = cv2.threshold(binary_threshold_2, self.threshold_3 * 255, 255, cv2.THRESH_BINARY)
 
-        self.contours, _ = cv2.findContours(self.binary.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        binary = binary_threshold_3.copy()
 
-        self.contour_image = np.zeros((self.binary.shape[0], self.binary.shape[1], 3), dtype=np.uint8)
+        contours, _ = cv2.findContours(binary.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        for itr, contour in enumerate(self.contours):
+        contour_image = np.zeros((binary.shape[0], binary.shape[1], 3), dtype=np.uint8)
+
+        for itr, contour in enumerate(contours):
             color = [255, 255, 255]
             if len(contour) > 50:
-                cv2.drawContours(self.contour_image, self.contours, itr, color, 1)
+                cv2.drawContours(contour_image, contours, itr, color, 1)
 
-        self.gray = cv2.cvtColor(self.contour_image, cv2.COLOR_BGR2GRAY)
+        return contour_image
+
+
+    def line_extraction(self, contour_image):
+
+        line_image = cv2.cvtColor(contour_image, cv2.COLOR_BGR2GRAY)
+
+        index_start = 100
+        index_end = line_image.shape[1] - 101
     
-        self.col_pts = np.linspace(0, self.gray.shape[1]-1, 25, dtype=np.uint)
+        col_pts = np.linspace(index_start, index_end, 25, dtype=np.uint)
         points = {}
-        for col in self.col_pts:
+        for col in col_pts:
             lister = []
-            for row in range(0, self.gray.shape[0]):
-                if (self.gray[row][col] > 220):
+            for row in range(0, line_image.shape[0]):
+                if (line_image[row][col] > 220):
                     lister.append(row)
             points[col] = lister
+
 
         for col, val  in points.items():
             for row in val:
                 coord = (col, row)
-                cv2.circle(self.contour_image, coord, 5, (255, 255, 255), -1)
+                cv2.circle(line_image, coord, 5, 255, -1)
+            
+        try:
+            for col, val in points.items():
+                cv2.line(line_image, (col, val[0]), (col, val[1]), 255, 3)
 
-        for col, val in points.items():
-            cv2.line(self.contour_image, (col, val[0]), (col, val[1]), (255, 255, 255), 3)
+        except:
+            print("No line to extract: Image might be dark")
 
-        print(points)
+        return points, contour_image, line_image
 
 
-def show(image):
-    while True:
-        cv2.imshow('Output', image)
+    def line_width(self, points, ref_line_width):
+        dist = []
+        for pt in points:
+            if len(points[pt]) <= 2 and len(points[pt]) > 1:
+                line_width = abs(pt[0] - pt[1]) * self.px_mm_factor
+                dist.append(line_width)
+        if len(dist) != 0:
+            avg_line_width = sum(dist) / len(dist)
+        else:
+            avg_line_width = 0
+        return avg_line_width
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
-    cv2.destroyAllWindows()
+    def show_image(self, image):
+        while True:
+            cv2.imshow('Output', image)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cv2.destroyAllWindows()
 
 
 
 if __name__ == '__main__':
-    cam = PylonCamera('measurement_camera')
-    test = LineWidthEstimator(cam.getImage())
-
+    pass
+    #TODO
 
 
 
