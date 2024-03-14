@@ -15,6 +15,9 @@ class Controller:
         self.LearningRate = 0.2
         self.C = 1
 
+        self.ref_line_width = 280
+        self.learning_filter = 0
+
         self.verbose = 3  # Debugging
  
 
@@ -40,8 +43,11 @@ class Controller:
     def process_model(self, line_width):
         self.processSpeed = (self.processGain / (line_width + self.processBias)) ** 2
         derivative = self.derivative_process_speed(line_width)
-        width_error = self.ref_line_width = line_width
+        width_error = self.ref_line_width - line_width
+        
         learning_filter = self.C * derivative
+        self.learning_filter = learning_filter
+
         self.processSpeed = self.processSpeed + (learning_filter * width_error)
 
         return self.processSpeed, width_error
@@ -68,6 +74,7 @@ class Controller:
 
 if __name__ == '__main__':
     test = Controller()
-    speed, error = test.process_model(280)
-    print(abs(speed))
+    speed, error = test.process_model(400)
+    print(speed)
+    print(test.learning_filter)
 

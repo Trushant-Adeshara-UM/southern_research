@@ -28,6 +28,8 @@ class Printer:
         self.current_x = 0
         self.current_y = 0
 
+        self.pressure = 0
+
         self.recipe = []
         self.starting_locations = []
         
@@ -35,7 +37,7 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.base_camera_offset = [-99.3, 1.45, 9.7] # Offset from needle zero to camera
+        self.base_camera_offset = [-100.1, 1.7968, 10.99] # Offset from needle zero to camera
         self.camera_offset = self.base_camera_offset.copy()
         self.print_location = [0, 0, 0]
         self.moving_height = 10
@@ -86,12 +88,10 @@ class Printer:
             self.staging.setPressure(voltage)
             self.curretn_pressure = pressure
 
-    def linear_print(self, axis, distance, resistance):
-        performance_params = self.get_performance_parameters(distance, resistance)
-        process_params = self.get_process_parameters(performance_params)
-        pressure = process_params['pressure']
-        speed = process_params['speed']
-        self.set_pressure(pressure)
+    def linear_print(self, axis, distance, speed):
+        #performance_params = self.get_performance_parameters(distance, resistance)
+        #process_params = self.get_process_parameters(performance_params)
+        self.set_pressure(self.pressure)
         if (axis == 0):
             self.staging.goto(x=distance, f=speed)
         elif (axis == 1):
@@ -136,7 +136,7 @@ class Printer:
 
     def linear_estimator(self, axis, distance, speed):
 
-        intervals = [distance/4, distance/4, distance/4, distance/4]
+        intervals = [(4 * distance)/10, (1 * distance)/10, (1 * distance)/10]
         line_widths = []
 
         cnt = 1
@@ -150,14 +150,11 @@ class Printer:
                 self.staging.goto(z=interval, f=speed)
             else:
                 raise Exception("Trying to move via a nonexistent axis")
-
-            if cnt == 4:
-                break
             
             captured_img = self.grab_image()
             
             t_str = time.strftime("%Y%m%d-%H%M%S")
-            img_str = "./test/" + t_str + "test" + ".png"
+            img_str = t_str + "test" + ".png"
 
             cv2.imwrite(img_str, captured_img)
             cnt += 1
@@ -212,8 +209,8 @@ class Printer:
         self.linear(self.yaxis, self.print_location[1] - current_y, self.yspeed)
 
         current_z = self.current_location[2]
-        self.linear(self.zaxis, 2 * (self.print_location[2] - current_z) / 3, self.zspeed)
-        self.linear(self.zaxis, (self.print_location[2] - current_z ) / 3, self.zspeed_slow)
+        self.linear(self.zaxis, 6 * (self.print_location[2] - current_z) / 7, self.zspeed)
+        self.linear(self.zaxis, (self.print_location[2] - current_z ) / 7, self.zspeed_slow)
 
         for idx, (prt, curr) in enumerate(zip(self.print_location, self.current_location)):
             if abs(prt - curr) > 1:

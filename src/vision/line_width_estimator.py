@@ -9,7 +9,7 @@ class LineWidthEstimator():
     """
 
     def __init__(self, image):
-        self.px_mm_factor = 1.59
+        self.px_mm_factor = 1.52
         self.threshold_1 = 0.3
         self.threshold_2 = 0.6
         self.threshold_3 = 0.9
