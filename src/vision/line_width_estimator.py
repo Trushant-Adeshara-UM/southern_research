@@ -70,15 +70,17 @@ class LineWidthEstimator():
 
     def line_width(self, points, ref_line_width):
         dist = []
-        for pt in points:
-            if len(points[pt]) <= 2 and len(points[pt]) > 1:
-                line_width = abs(pt[0] - pt[1]) * self.px_mm_factor
-                dist.append(line_width)
+        for col, val in points.items():
+            if len(points[col]) <=2 and len(points[col]) > 1:
+                   line_width = abs(val[0] - val[1])
+                   dist.append(line_width)
+
         if len(dist) != 0:
             avg_line_width = sum(dist) / len(dist)
         else:
             avg_line_width = 0
         return avg_line_width
+
 
 
     def show_image(self, image):

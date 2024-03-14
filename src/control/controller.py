@@ -1,37 +1,51 @@
 # Import python modules
 import numpy as np
+from sympy import symbols, diff
 
 class Controller:
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         # Properties
-        self.performanceGain = 78927
-        self.performanceBias = 1.8169
-        self.processGain = 94.957
-        self.processBias = -156.54
-        self.processSpeed = 0.7
+        #self.performanceGain = 78927
+        #self.performanceBias = 1.8169
+
+        self.processGain = 201.22
+        self.processBias = 22.705
+
+        self.processSpeed = 0
         self.LearningRate = 0.2
+        self.C = 1
+
         self.verbose = 3  # Debugging
+ 
 
-        # Handle initialization with a file path or other arguments
-        if len(args) == 1 and isinstance(args[0], str):
-            self.load_controller(args[0])
-        else:
-            # TODO: Implement parse_args method
-            # self.parse_args(*args, **kwargs)
-            self.vdisp("Initialized Controller")
+    def derivative_process_speed(self, line_width):
+        # Define the symbols
+        line_width_sym, processGain_sym, processBias_sym = symbols('line_width processGain processBias')
 
-    def get_performance_parameters(self, length, resistance):
-        lineWidth = np.sqrt(1 / ((resistance - self.performanceBias) / self.performanceGain))
-        return {'width': lineWidth, 'length': length}
+        # Define the equation
+        equation = (processGain_sym / (line_width_sym + processBias_sym))**2
 
-    def get_process_parameters(self, performanceParams):
-        lineWidth = performanceParams['width']
-        speed = self.processSpeed
-        pressure = ((lineWidth + self.processBias) / self.processGain) ** 2
-        return {'speed': speed, 'pressure': pressure}
+        # Compute the derivative with respect to line_width
+        derivative = diff(equation, line_width_sym)
 
-    def update_gain(self, newGain):
-        self.Gain = ((1 - self.LearningRate) * self.Gain) + (self.LearningRate * newGain)
+        # Substitute the actual values
+        derivative_evaluated = derivative.subs({
+            line_width_sym: line_width,
+            processGain_sym: self.processGain,
+            processBias_sym: self.processBias
+        })
+
+        return derivative_evaluated
+
+    def process_model(self, line_width):
+        self.processSpeed = (self.processGain / (line_width + self.processBias)) ** 2
+        derivative = self.derivative_process_speed(line_width)
+        width_error = self.ref_line_width = line_width
+        learning_filter = self.C * derivative
+        self.processSpeed = self.processSpeed + (learning_filter * width_error)
+
+        return self.processSpeed, width_error
+
 
     def save_controller(self, filename):
         controllerData = {
@@ -52,19 +66,8 @@ class Controller:
         if self.verbose >= l:
             print(f'    C: {s}')
 
-# Additional methods and properties can be added as needed
+if __name__ == '__main__':
+    test = Controller()
+    speed, error = test.process_model(280)
+    print(abs(speed))
 
-function matchingTests = searchTestByLinewidth(tests, linewidth)
-    % Find indices of tests with the given linewidth
-    indices = find(tests.linewidth == linewidth);
-
-    % Check if any tests are found
-    if isempty(indices)
-        disp('No tests found with the given linewidth.');
-        matchingTests = [];
-    else
-        % Retrieve matching tests
-        matchingTests.linewidth = tests.linewidth(indices);
-        matchingTests.speed = tests.speed(indices);
-    end
-end

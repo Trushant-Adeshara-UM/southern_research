@@ -1,6 +1,7 @@
 # Import python modules
 import time
 import sys
+import cv2
 
 sys.path.insert(0, 'C:\\Users\\trushant\\southern_research\\src')
 
@@ -11,17 +12,17 @@ from vision.image_grabber import ImageGrabber
 from vision.line_width_estimator import LineWidthEstimator
 
 class Printer:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ref_line_width):
         # Axis specifier
         self.xaxis = 0
         self.yaxis = 1
         self.zaxis = 2
 
         # Initial speed in each axis
-        self.xspeed = 0.5
-        self.xspeed_fast = 10
-        self.yspeed = 0.5
-        self.zspeed = 0.5
+        self.xspeed = 5
+        self.xspeed_fast = 50
+        self.yspeed = 20 
+        self.zspeed = 5 
         self.zspeed_slow = 0.1
 
         self.current_x = 0
@@ -34,11 +35,13 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.camera_offset = [-99.3, 1.45, -0.3] # Offset from needle zero to camera
+        self.base_camera_offset = [-99.3, 1.45, 9.7] # Offset from needle zero to camera
+        self.camera_offset = self.base_camera_offset.copy()
         self.print_location = [0, 0, 0]
         self.moving_height = 10
         self.verbose = 3
 
+        self.ref_width = ref_line_width
         self.estimated_line_width = 0
 
         # Initialize stages using Aerotech class
@@ -133,9 +136,10 @@ class Printer:
 
     def linear_estimator(self, axis, distance, speed):
 
-        intervals = [distance/4, distance/2, (3*distance)/4]
+        intervals = [distance/4, distance/4, distance/4, distance/4]
         line_widths = []
 
+        cnt = 1
         for interval in intervals:
 
             if (axis == 0):
@@ -146,14 +150,25 @@ class Printer:
                 self.staging.goto(z=interval, f=speed)
             else:
                 raise Exception("Trying to move via a nonexistent axis")
+
+            if cnt == 4:
+                break
             
-            captured_img = grab_image()
-            line_widths.append(estimate_line_width(captured_img))
+            captured_img = self.grab_image()
+            
+            t_str = time.strftime("%Y%m%d-%H%M%S")
+            img_str = "./test/" + t_str + "test" + ".png"
+
+            cv2.imwrite(img_str, captured_img)
+            cnt += 1
+            line_widths.append(self.estimate_line_width(captured_img))
         
         if len(line_widths) != 0:
-            self.estimated_line_width = sum(line_widths) / len(line_width)
+            self.estimated_line_width = sum(line_widths) / len(line_widths)
         
         self.current_location = [self.staging.x, self.staging.y, self.staging.z]
+
+        return self.estimated_line_width
 
     def move_to_location(self, location):
         current_z = self.current_location[2]
@@ -187,7 +202,7 @@ class Printer:
 
     def move_to_nozzle(self):
         current_z = self.current_location[2]
-        self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
+        self.linear(self.zaxis, self.moving_height - current_z, self.zspeed_slow)
 
         current_x = self.current_location[0]
         self.linear(self.xaxis, 9 * (self.print_location[0] - current_x) / 10, self.xspeed_fast)
@@ -197,8 +212,9 @@ class Printer:
         self.linear(self.yaxis, self.print_location[1] - current_y, self.yspeed)
 
         current_z = self.current_location[2]
-        self.linear(self.zaxis, 2 * (self.camera_offset[2] - current_z) / 3, self.zspeed)
-        self.linear(self.zaxis, (self.camera_offset[2] - current_z ) / 3, self.zspeed_slow)
+        self.linear(self.zaxis, 2 * (self.print_location[2] - current_z) / 3, self.zspeed)
+        self.linear(self.zaxis, (self.print_location[2] - current_z ) / 3, self.zspeed_slow)
 
-        if self.print_location != self.current_location:
-            raise ValueError("Something went wrong with moving!")
+        for idx, (prt, curr) in enumerate(zip(self.print_location, self.current_location)):
+            if abs(prt - curr) > 1:
+                raise ValueError("Error between print location and current location greater than 1mm!")
