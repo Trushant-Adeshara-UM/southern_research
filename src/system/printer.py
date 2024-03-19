@@ -3,7 +3,8 @@ import time
 import sys
 import cv2
 
-sys.path.insert(0, 'C:\\Users\\trushant\\southern_research\\src')
+base_path = 'C:\\Users\\trushant\\southern_research\\src'
+sys.path.insert(0, base_path)
 
 from stages.stage_control import Aerotech
 
@@ -21,9 +22,9 @@ class Printer:
         # Initial speed in each axis
         self.xspeed = 5
         self.xspeed_fast = 50
-        self.yspeed = 20 
-        self.zspeed = 5 
-        self.zspeed_slow = 0.1
+        self.yspeed = 50
+        self.zspeed = 50
+        self.zspeed_slow = 0.3
 
         self.current_x = 0
         self.current_y = 0
@@ -37,7 +38,7 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.base_camera_offset = [-100.1, 1.7968, 10.99] # Offset from needle zero to camera
+        self.base_camera_offset = [-98.39, 1.135, 12] # Offset from needle zero to camera
         self.camera_offset = self.base_camera_offset.copy()
         self.print_location = [0, 0, 0]
         self.moving_height = 10
@@ -136,7 +137,7 @@ class Printer:
 
     def linear_estimator(self, axis, distance, speed):
 
-        intervals = [(4 * distance)/10, (1 * distance)/10, (1 * distance)/10]
+        intervals = [(4 * distance)/10, (1 * distance)/10, (1 * distance)/10 ]
         line_widths = []
 
         cnt = 1
@@ -154,7 +155,7 @@ class Printer:
             captured_img = self.grab_image()
             
             t_str = time.strftime("%Y%m%d-%H%M%S")
-            img_str = t_str + "test" + ".png"
+            img_str = "itr" + str(cnt) + "-" + t_str + "test" + ".png"
 
             cv2.imwrite(img_str, captured_img)
             cnt += 1
@@ -195,11 +196,11 @@ class Printer:
 
         current_z = self.current_location[2]
         #self.linear(self.zaxis, 2 * (self.camera_offset[2] - current_z) / 3, self.zspeed)
-        self.linear(self.zaxis, self.camera_offset[2] - current_z, self.zspeed_slow)
+        self.linear(self.zaxis, self.camera_offset[2] - current_z, self.zspeed)
 
     def move_to_nozzle(self):
         current_z = self.current_location[2]
-        self.linear(self.zaxis, self.moving_height - current_z, self.zspeed_slow)
+        self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
 
         current_x = self.current_location[0]
         self.linear(self.xaxis, 9 * (self.print_location[0] - current_x) / 10, self.xspeed_fast)

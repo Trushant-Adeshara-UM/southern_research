@@ -13,7 +13,7 @@ class Controller:
 
         self.processSpeed = 0
         self.LearningRate = 0.2
-        self.C = 1
+        self.C = 0.1
 
         self.ref_line_width = 280
         self.learning_filter = 0
@@ -40,17 +40,27 @@ class Controller:
 
         return derivative_evaluated
 
-    def process_model(self, line_width):
-        self.processSpeed = (self.processGain / (line_width + self.processBias)) ** 2
+    def base_process(self, line_width):
+        speed = (self.processGain / (line_width + self.processBias)) ** 2
+        return speed
+
+    def process_model(self, line_width, prev_speed):
+        print(f'Previous: {prev_speed}')
         derivative = self.derivative_process_speed(line_width)
+        print(f'Derivative: {derivative}')
         width_error = self.ref_line_width - line_width
+        print(f'Width Error: {width_error}')
         
         learning_filter = self.C * derivative
+        print(f'Learning Filter: {learning_filter}')
         self.learning_filter = learning_filter
 
-        self.processSpeed = self.processSpeed + (learning_filter * width_error)
+        print_speed = prev_speed + (learning_filter * width_error)
+        print(f'New Print Speed: {print_speed}')
 
-        return self.processSpeed, width_error
+        self.processSpeed = print_speed
+
+        return print_speed, width_error
 
 
     def save_controller(self, filename):
@@ -74,7 +84,5 @@ class Controller:
 
 if __name__ == '__main__':
     test = Controller()
-    speed, error = test.process_model(400)
-    print(speed)
-    print(test.learning_filter)
+    test.process_model(197.88)
 

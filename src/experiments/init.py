@@ -28,11 +28,12 @@ if __name__ == '__main__':
     #                          [-4, 0, 0], [-4, 13, 0], [-4, 26, 0] ]
 
     #update_print_location = [ [0, 13, 0], [0, 26, 0], [0, 39, 0], [0, 52, 0], [0, 65, 0] ]
-    update_print_location = [ [0, 13, 0] ]
+    update_print_location = [ [0, 0, 0] ]
 
  
     for location in update_print_location:
-        test.linear_print(1, line_length, abs(print_speed))
+        #test.linear_print(1, line_length, abs(print_speed))
+        test.linear_print(0, -line_length, print_speed)
         test.print_location = location
         test.move_to_nozzle()
 

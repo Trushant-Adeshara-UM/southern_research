@@ -13,11 +13,11 @@ if __name__ == '__main__':
     line_length = 10
     ref_line_width = 280
     delta = 0.1 * ref_line_width
-    pressure = 20
+    pressure = 22
 
     test = Printer(ref_line_width)
     test.set_pressure(pressure)
-    time.sleep(5)
+    time.sleep(15)
     test.set_pressure(0)
     
     

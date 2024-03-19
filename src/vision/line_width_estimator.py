@@ -2,6 +2,9 @@
 import cv2
 import numpy as np
 from scipy.signal import medfilt2d
+import time
+
+base_path = 'C:\\Users\\trushant\\southern_research\\src'
 
 class LineWidthEstimator():
     """
@@ -64,6 +67,9 @@ class LineWidthEstimator():
 
         except:
             print("No line to extract: Image might be dark")
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "debug" + t_str + "test" + ".png"
 
         return points, contour_image, line_image
 

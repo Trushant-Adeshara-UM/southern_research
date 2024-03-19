@@ -26,7 +26,7 @@ RemoveParameterLimit	0
 RemoveParameterLimitSelector	Gain
 ExposureAuto	Off
 ExposureMode	Timed
-ExposureTime	106391.0
+ExposureTime	2571.0
 AcquisitionBurstFrameCount	1
 TriggerSelector	FrameBurstStart
 TriggerMode	Off
