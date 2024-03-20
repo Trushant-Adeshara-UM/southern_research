@@ -38,10 +38,10 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.base_camera_offset = [-98.39, 1.135, 12] # Offset from needle zero to camera
+        self.base_camera_offset = [-100.6123, 1.916, 6.1033] # Offset from needle zero to camera
         self.camera_offset = self.base_camera_offset.copy()
         self.print_location = [0, 0, 0]
-        self.moving_height = 10
+        self.moving_height = 18
         self.verbose = 3
 
         self.ref_width = ref_line_width
@@ -127,39 +127,59 @@ class Printer:
 
         return image
 
-    def estimate_line_width(self, image):
+    def estimate_line_width(self, image, cnt):
         estimator = LineWidthEstimator(image)
-        contour = estimator.contour_detection()
-        points, _, line_image = estimator.line_extraction(contour)
+        binary, contour = estimator.contour_detection()
+        angle = estimator.get_orientation(contour)
+        rot_image = estimator.rotate_image(contour, -angle)
+        points, _, line_image = estimator.line_extraction(rot_image)
         line_width = estimator.line_width(points, self.ref_width)
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "itr" + str(cnt) + "-" + t_str + "original" + ".png"
+        cv2.imwrite(img_str, image)
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "itr" + str(cnt) + "-" + t_str + "binary" + ".png"
+        cv2.imwrite(img_str, binary)
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "itr" + str(cnt) + "-" + t_str + "contour" + ".png"
+        cv2.imwrite(img_str, contour)
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "itr" + str(cnt) + "-" + t_str + "rot" + ".png"
+        cv2.imwrite(img_str, rot_image)
+
+        t_str = time.strftime("%Y%m%d-%H%M%S")
+        img_str = "itr" + str(cnt) + "-" + t_str + "line" + ".png"
+
+        cv2.imwrite(img_str, line_image)
+
         
         return line_width
 
     def linear_estimator(self, axis, distance, speed):
 
-        intervals = [(4 * distance)/10, (1 * distance)/10, (1 * distance)/10 ]
+        intervals = [(distance/2.5), (distance/15), (distance/15)]
         line_widths = []
 
         cnt = 1
-        for interval in intervals:
+        for it in range(0, 3):
 
             if (axis == 0):
-                self.staging.goto(x=interval, f=speed)
+                self.staging.goto(x=intervals[it], f=speed)
             elif (axis == 1):
-                self.staging.goto(y=interval, f=speed)
+                self.staging.goto(y=intervals[it], f=speed)
             elif (axis == 2):
-                self.staging.goto(z=interval, f=speed)
+                self.staging.goto(z=intervals[it], f=speed)
             else:
                 raise Exception("Trying to move via a nonexistent axis")
             
             captured_img = self.grab_image()
             
-            t_str = time.strftime("%Y%m%d-%H%M%S")
-            img_str = "itr" + str(cnt) + "-" + t_str + "test" + ".png"
-
-            cv2.imwrite(img_str, captured_img)
-            cnt += 1
-            line_widths.append(self.estimate_line_width(captured_img))
+            line_widths.append(self.estimate_line_width(captured_img, cnt))
+            cnt+=1
         
         if len(line_widths) != 0:
             self.estimated_line_width = sum(line_widths) / len(line_widths)
@@ -188,8 +208,8 @@ class Printer:
         self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
 
         current_x = self.current_location[0]
-        self.linear(self.xaxis, 9 * (self.camera_offset[0] - current_x) / 10, self.xspeed_fast)
-        self.linear(self.xaxis, (self.camera_offset[0] - current_x) / 10, self.xspeed)
+        self.linear(self.xaxis,  self.camera_offset[0] - current_x , self.xspeed_fast)
+        #self.linear(self.xaxis, (self.camera_offset[0] - current_x) / 10, self.xspeed)
 
         current_y = self.current_location[1]
         self.linear(self.yaxis, self.camera_offset[1] - current_y, self.yspeed)
@@ -203,8 +223,8 @@ class Printer:
         self.linear(self.zaxis, self.moving_height - current_z, self.zspeed)
 
         current_x = self.current_location[0]
-        self.linear(self.xaxis, 9 * (self.print_location[0] - current_x) / 10, self.xspeed_fast)
-        self.linear(self.xaxis, (self.print_location[0] - current_x) / 10, self.xspeed)
+        self.linear(self.xaxis, self.print_location[0] - current_x , self.xspeed_fast)
+        #self.linear(self.xaxis, (self.print_location[0] - current_x) / 10, self.xspeed)
 
         current_y = self.current_location[1]
         self.linear(self.yaxis, self.print_location[1] - current_y, self.yspeed)
