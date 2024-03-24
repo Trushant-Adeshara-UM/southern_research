@@ -24,7 +24,7 @@ class Printer:
         self.xspeed_fast = 50
         self.yspeed = 50
         self.zspeed = 50
-        self.zspeed_slow = 0.3
+        self.zspeed_slow = 0.5
 
         self.current_x = 0
         self.current_y = 0
@@ -38,7 +38,7 @@ class Printer:
 
         self.current_pressure = 0
         self.current_location = [0, 0, 0]
-        self.base_camera_offset = [-100.6123, 1.916, 6.1033] # Offset from needle zero to camera
+        self.base_camera_offset = [-98.3159, 1.1260, 5.2599] # Offset from needle zero to camera
         self.camera_offset = self.base_camera_offset.copy()
         self.print_location = [0, 0, 0]
         self.moving_height = 18
@@ -80,9 +80,9 @@ class Printer:
             self.vdisp("Voltage too low, setting to 0")
             self.staging.setPressure(voltage)
             self.current_pressure = 0
-        elif voltage > 2:
-            voltage = 2
-            self.vdisp("Voltage too high, setting it to 2")
+        elif voltage > 5:
+            voltage = 5 
+            self.vdisp("Voltage too high, setting it to 5")
             self.staging.setPressure(voltage)
             self.current_pressure = (voltage - 0.0899) / 0.0844
         else:
@@ -200,8 +200,8 @@ class Printer:
 
         current_z = self.current_location[2]
  
-        self.linear(self.zaxis, 2 * (location[2] - current_z) / 3, self.zspeed)
-        self.linear(self.zaxis, (location[2] - current_z) / 3, self.zspeed_slow)
+        self.linear(self.zaxis, location[2] - current_z, self.zspeed)
+        #self.linear(self.zaxis, (location[2] - current_z) / 3, self.zspeed_slow)
 
     def move_to_camera(self):
         current_z = self.current_location[2]

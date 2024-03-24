@@ -13,7 +13,7 @@ class Controller:
 
         self.processSpeed = 0
         self.LearningRate = 0.2
-        self.C = 0.1
+        self.C = 0.2
 
         self.ref_line_width = 280
         self.learning_filter = 0
