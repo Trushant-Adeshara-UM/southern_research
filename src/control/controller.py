@@ -1,32 +1,69 @@
-# Import python modules
 import numpy as np
 from sympy import symbols, diff
+import os
+import sys
+import yaml
+
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+config_path = os.path.join(root_path, '..\config\controller.yaml')
+sys.path.insert(0, root_path)
+
+#print(root_path)
+#print(config_path)
+
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file)
+
+
 
 class Controller:
-    def __init__(self):
-        # Properties
-        #self.performanceGain = 78927
-        #self.performanceBias = 1.8169
+    """
+    Controller class with process model implementation.
 
-        self.processGain = 201.22
-        self.processBias = 22.705
+    This class takes reference line width as input parameters and calculates
+    stage speed based on the defined controller. 
 
-        self.processSpeed = 0
-        self.LearningRate = 0.2
-        self.C = 0.2
+    Attributes:
+        ref_line_width  (float)   :  Input reference line width
+        process_gain    (float)   :  Gain of the process
+        process_bias    (float)   :  Bias of the process
+        process_speed   (float)   :  Speed of the process
+        C               (float)   :  Constant C
+        learning_filter (float)   :  Learning filter of the process
 
-        self.ref_line_width = 280
-        self.learning_filter = 0
+    """
 
-        self.verbose = 3  # Debugging
- 
+    def __init__(self, ref_line_width):
+        """
+        Initializes a new instance of Controller class.
+
+        Parameters:
+            ref_line_width (float)  :  Input reference line width
+
+        """
+        self.process_gain = config['params']['gain']
+        self.process_bias = config['params']['bias']
+        self.C = config['params']['C']
+
+        self.ref_line_width = ref_line_width
+
+        self.process_speed = 0.0
+        self.learning_filter = 0.0
+
 
     def derivative_process_speed(self, line_width):
+        """
+        Evaluate derivative of the process model.
+
+        Parameters:
+            line_width (float)   :   Previous line width based on vision system
+
+        """
         # Define the symbols
-        line_width_sym, processGain_sym, processBias_sym = symbols('line_width processGain processBias')
+        line_width_sym, process_gain_sym, process_bias_sym = symbols('line_width process_gain process_bias')
 
         # Define the equation
-        equation = (processGain_sym / (line_width_sym + processBias_sym))**2
+        equation = (process_gain_sym / (line_width_sym + process_bias_sym))**2
 
         # Compute the derivative with respect to line_width
         derivative = diff(equation, line_width_sym)
@@ -34,55 +71,42 @@ class Controller:
         # Substitute the actual values
         derivative_evaluated = derivative.subs({
             line_width_sym: line_width,
-            processGain_sym: self.processGain,
-            processBias_sym: self.processBias
+            process_gain_sym: self.process_gain,
+            process_bias_sym: self.process_bias
         })
 
         return derivative_evaluated
 
-    def base_process(self, line_width):
-        speed = (self.processGain / (line_width + self.processBias)) ** 2
+
+    def base_process(self, ref_line_width):
+        """
+        Method to evaluate initial stage speed based on ref_line_width.
+
+        Parameters:
+            ref_line_width (float)   :   Reference line width (expected)
+
+        """
+        speed = (self.process_gain / (ref_line_width + self.process_bias)) ** 2
         return speed
 
+
     def process_model(self, line_width, prev_speed):
-        print(f'Previous: {prev_speed}')
+        """
+        Method to calcuate updated print_speed and width_error based
+        on process model.
+
+        Parameters:
+            line_width (float)   :   Initial line width
+            prev_speed (float)   :   Previous stage speed
+
+        """
         derivative = self.derivative_process_speed(line_width)
-        print(f'Derivative: {derivative}')
         width_error = self.ref_line_width - line_width
-        print(f'Width Error: {width_error}')
-        
         learning_filter = self.C * derivative
-        print(f'Learning Filter: {learning_filter}')
         self.learning_filter = learning_filter
-
         print_speed = prev_speed + (learning_filter * width_error)
-        print(f'New Print Speed: {print_speed}')
-
-        self.processSpeed = print_speed
+        self.process_speed = print_speed
 
         return print_speed, width_error
 
-
-    def save_controller(self, filename):
-        controllerData = {
-            'Gain': self.Gain, 
-            'LearningRate': self.LearningRate, 
-            # TODO: Add other relevant properties to save
-        }
-        # TODO: Implement file saving using Python's file handling methods
-        self.vdisp(f"Saved controller to {filename}")
-
-    def load_controller(self, filename):
-        self.vdisp(f"Loaded controller from {filename}")
-        # TODO: Implement file loading using Python's file handling methods
-        # After loading, update the object's properties with the loaded values
-        # If the file format is invalid, raise an appropriate error
-
-    def vdisp(self, s, l=1):
-        if self.verbose >= l:
-            print(f'    C: {s}')
-
-if __name__ == '__main__':
-    test = Controller()
-    test.process_model(197.88)
 
